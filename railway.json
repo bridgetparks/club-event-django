@@ -1,0 +1,4 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "deploy": {"startCommand": "python manage.py migrate && gunicorn club_event_site.wsgi"}
+}

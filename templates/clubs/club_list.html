@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3"><h1>Clubs</h1>{% if user.is_superuser %}<a class="btn btn-primary" href="{% url 'club_create' %}">Create Club</a>{% endif %}</div>
+<div class="row g-3">{% for club in clubs %}<div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-body"><h2 class="h5"><a href="{% url 'club_detail' club.pk %}">{{ club.name }}</a></h2><p>{{ club.description|default:'No description yet.' }}</p><span class="badge text-bg-secondary">{{ club.member_total }} members</span></div></div></div>{% empty %}<p>No clubs yet.</p>{% endfor %}</div>
+{% endblock %}

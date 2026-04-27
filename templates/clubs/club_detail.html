@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3"><div><h1>{{ club.name }}</h1><p class="lead">{{ club.description }}</p></div><div>{% if can_manage %}<a class="btn btn-outline-primary" href="{% url 'club_update' club.pk %}">Edit</a>{% endif %}{% if user.is_superuser %}<a class="btn btn-outline-danger" href="{% url 'club_delete' club.pk %}">Delete</a>{% endif %}</div></div>
+<h2 class="h4">Roster</h2>{% include 'clubs/partials_membership_table.html' with memberships=roster compact=True %}
+<h2 class="h4 mt-4">Events</h2>{% for event in events %}<div class="list-card"><a href="{% url 'event_detail' event.pk %}">{{ event.title }}</a><small>{{ event.event_date|date:'M j, Y g:i A' }}</small></div>{% empty %}<p class="text-muted">No events for this club.</p>{% endfor %}
+{% endblock %}

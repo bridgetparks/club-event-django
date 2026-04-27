@@ -1,0 +1,13 @@
+{% extends 'base.html' %}{% block content %}
+<h1 class="mb-4">Dashboard</h1>
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="metric"><b>{{ student_count }}</b><span>Students</span></div></div>
+  <div class="col-md-3"><div class="metric"><b>{{ club_count }}</b><span>Clubs</span></div></div>
+  <div class="col-md-3"><div class="metric"><b>{{ membership_count }}</b><span>Memberships</span></div></div>
+  <div class="col-md-3"><div class="metric"><b>{{ event_count }}</b><span>Events</span></div></div>
+</div>
+<div class="row g-4">
+  <div class="col-lg-6"><h2 class="h4">Recent Club Memberships</h2>{% include 'clubs/partials_membership_table.html' with memberships=recent_memberships compact=True %}</div>
+  <div class="col-lg-6"><h2 class="h4">Upcoming Events</h2>{% for event in upcoming_events %}<div class="list-card"><a href="{% url 'event_detail' event.pk %}">{{ event.title }}</a><small>{{ event.event_date|date:'M j, Y g:i A' }} · {{ event.location|default:'TBD' }}</small></div>{% empty %}<p class="text-muted">No upcoming events.</p>{% endfor %}</div>
+</div>
+{% endblock %}

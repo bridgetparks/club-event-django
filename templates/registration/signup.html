@@ -1,0 +1,7 @@
+{% extends 'base.html' %}{% block title %}Sign up · GU Club Tracker{% endblock %}{% block content %}
+<div class="auth-card mx-auto">
+  <h1 class="h3 mb-2">Create your account</h1>
+  <p class="text-muted">Only Gonzaga email domains are accepted.</p>
+  <form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary w-100">Sign up</button></form>
+</div>
+{% endblock %}

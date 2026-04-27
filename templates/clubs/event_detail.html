@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% block content %}
+{% if event.cover_image %}<img src="{{ event.cover_image.url }}" class="hero-cover mb-4" alt="{{ event.title }} cover image">{% endif %}
+<div class="d-flex justify-content-between align-items-start mb-3"><div><h1>{{ event.title }}</h1><p class="lead">{{ event.event_date|date:'M j, Y g:i A' }} · {{ event.location|default:'TBD' }}</p></div><div>{% if can_manage %}<a class="btn btn-outline-primary" href="{% url 'event_update' event.pk %}">Edit</a> <a class="btn btn-outline-success" href="{% url 'event_attendance' event.pk %}">Attendance</a> <a class="btn btn-outline-danger" href="{% url 'event_delete' event.pk %}">Delete</a>{% endif %}</div></div>
+<p>{{ event.description|linebreaks }}</p>
+<p><b>Clubs:</b> {% for club in event.clubs.all %}<a href="{% url 'club_detail' club.pk %}">{{ club.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<p><b>Capacity:</b> {% if event.capacity %}{{ event.going_count }}/{{ event.capacity }} going, {{ event.waitlist_count }} waitlisted{% else %}Unlimited{% endif %}</p>
+<p>{% if event.category %}<span class="badge text-bg-primary">{{ event.category.name }}</span>{% endif %} {% for tag in event.tags.all %}<span class="badge text-bg-light">#{{ tag.name }}</span>{% endfor %}</p>
+{% if rsvp and rsvp.status != 'cancelled' %}<div class="alert alert-info">Your RSVP status: {{ rsvp.get_status_display }}</div><form method="post" action="{% url 'event_cancel_rsvp' event.pk %}">{% csrf_token %}<button class="btn btn-outline-danger">Cancel RSVP</button></form>{% elif not event.is_past %}<form method="post" action="{% url 'event_rsvp' event.pk %}">{% csrf_token %}<button class="btn btn-primary">RSVP</button></form>{% else %}<div class="alert alert-secondary">This event has ended.</div>{% endif %}
+{% endblock %}
