@@ -62,6 +62,24 @@ class ClubMembership(models.Model):
     def __str__(self):
         return f'{self.user} in {self.club}'
 
+class MembershipRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING  = 'pending',  'Pending'
+        APPROVED = 'approved', 'Approved'
+        DENIED   = 'denied',   'Denied'
+
+    club       = models.ForeignKey(Club, on_delete=models.CASCADE, related_name='membership_requests')
+    user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name='membership_requests')
+    status     = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('club', 'user')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user} → {self.club} ({self.status})'
 
 class EventCategory(models.Model):
     name = models.CharField(max_length=80, unique=True)
@@ -186,3 +204,19 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f'{self.user} attended {self.event}'
+
+import hashlib
+
+class AdminProfile(models.Model):
+    user     = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin_profile')
+    pin_hash = models.CharField(max_length=64, help_text='SHA-256 hash of the admin PIN')
+
+    def set_pin(self, raw_pin: str):
+        self.pin_hash = hashlib.sha256(raw_pin.encode()).hexdigest()
+
+    def check_pin(self, raw_pin: str) -> bool:
+        return self.pin_hash == hashlib.sha256(raw_pin.encode()).hexdigest()
+
+    def __str__(self):
+        return f'AdminProfile({self.user})'
+    

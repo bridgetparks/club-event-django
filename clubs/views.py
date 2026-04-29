@@ -225,3 +225,113 @@ def event_attendance(request, pk):
         return redirect('event_detail', pk=pk)
     checked = set(event.attendance_records.values_list('user_id', flat=True))
     return render(request, 'clubs/attendance.html', {'event': event, 'attendees': attendees, 'checked': checked})
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from .models import MembershipRequest, AdminProfile
+
+
+@login_required
+def club_request_join(request, pk):
+    club = get_object_or_404(Club, pk=pk)
+    if request.method == 'POST':
+        if ClubMembership.objects.filter(club=club, user=request.user).exists():
+            messages.info(request, 'You are already a member.')
+        else:
+            MembershipRequest.objects.get_or_create(club=club, user=request.user)
+            messages.success(request, f'Your request to join {club.name} has been sent!')
+    return redirect('club_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def admin_pin_check(request):
+    try:
+        data = json.loads(request.body)
+        pin  = data.get('pin', '')
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({'ok': False, 'error': 'Bad request'}, status=400)
+    try:
+        profile = request.user.admin_profile
+        ok = profile.check_pin(pin)
+    except AdminProfile.DoesNotExist:
+        ok = request.user.is_superuser and pin == 'admin'
+    if ok:
+        request.session['admin_pin_verified'] = True
+    return JsonResponse({'ok': ok})
+
+
+def admin_pin_required(view_func):
+    from functools import wraps
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        if request.user.is_superuser or request.session.get('admin_pin_verified'):
+            return view_func(request, *args, **kwargs)
+        messages.error(request, 'Admin PIN required.')
+        return redirect('dashboard')
+    return wrapper
+
+
+@login_required
+@admin_pin_required
+def admin_requests(request):
+    pending = MembershipRequest.objects.filter(
+        status=MembershipRequest.Status.PENDING
+    ).select_related('user', 'club').order_by('-created_at')
+    return render(request, 'clubs/admin_requests.html', {'pending': pending})
+
+
+@login_required
+@admin_pin_required
+def admin_request_action(request, pk):
+    req = get_object_or_404(MembershipRequest, pk=pk)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'approve':
+            req.status = MembershipRequest.Status.APPROVED
+            req.save()
+            ClubMembership.objects.get_or_create(club=req.club, user=req.user)
+            messages.success(request, f'{req.user} approved for {req.club}.')
+        elif action == 'deny':
+            req.status = MembershipRequest.Status.DENIED
+            req.save()
+            messages.info(request, f'{req.user} denied for {req.club}.')
+    return redirect('admin_requests')
+
+
+@login_required
+def event_calendar(request):
+    import calendar as cal_mod
+    from datetime import date
+    today = date.today()
+    year  = int(request.GET.get('year',  today.year))
+    month = int(request.GET.get('month', today.month))
+    cal   = cal_mod.Calendar(firstweekday=6)
+    weeks = cal.monthdatescalendar(year, month)
+    events = Event.objects.filter(
+        event_date__year=year,
+        event_date__month=month,
+    ).select_related('category').prefetch_related('clubs')
+    events_by_date = {}
+    for ev in events:
+        d = ev.event_date.date()
+        events_by_date.setdefault(d, []).append(ev)
+    if month == 1:
+        prev_year, prev_month = year - 1, 12
+    else:
+        prev_year, prev_month = year, month - 1
+    if month == 12:
+        next_year, next_month = year + 1, 1
+    else:
+        next_year, next_month = year, month + 1
+    context = {
+        'weeks': weeks, 'events_by_date': events_by_date,
+        'today': today, 'year': year, 'month': month,
+        'month_name': cal_mod.month_name[month],
+        'prev_year': prev_year, 'prev_month': prev_month,
+        'next_year': next_year, 'next_month': next_month,
+    }
+    return render(request, 'clubs/calendar.html', context)
